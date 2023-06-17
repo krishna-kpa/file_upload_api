@@ -28,16 +28,17 @@ const File = mongoose.model('File', fileSchema);
 // Initialize Firebase Admin SDK
 const serviceAccount = require('./e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json');
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+initializeApp({
+  credential: cert(serviceAccount),
+  storageBucket: '<BUCKET_NAME>.appspot.com'
 });
 
-const bucket = admin.storage().bucket();
+bucket = getStorage().bucket();
 
 // Configure multer storage
 const upload = multer({
   storage: multerGoogleStorage.storageEngine({
-    bucket: bucket.name,
+    bucket: bucketName,
     keyFilename: './e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json',
     filename: (req, file, cb) => {
       const fileId = req.fileId; // Assuming you pass the document _id as "fileId" in the request
