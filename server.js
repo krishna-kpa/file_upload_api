@@ -28,12 +28,12 @@ const File = mongoose.model('File', fileSchema);
 // Initialize Firebase Admin SDK
 const serviceAccount = require('./e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json');
 
-initializeApp({
-  credential: cert(serviceAccount),
-  storageBucket: '<BUCKET_NAME>.appspot.com'
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
 });
 
-bucket = getStorage().bucket();
+const bucketName = 'gs://e-class-file-upload.appspot.com'; // Replace 'your-bucket-name' with your actual bucket name
+const bucket = admin.storage().bucket(bucketName);
 
 // Configure multer storage
 const upload = multer({
