@@ -2,15 +2,18 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const mongoose = require('mongoose');
+const admin = require('firebase-admin');
+const multerGoogleStorage = require('multer-google-storage');
 
 const app = express();
 const port = 3000;
 
 // Connect to MongoDB
-mongoose.connect('mongodb+srv://admin_kp:admin123@cluster0.hlr4lt7.mongodb.net/files?retryWrites=true&w=majority', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose
+  .connect('mongodb+srv://admin_kp:admin123@cluster0.hlr4lt7.mongodb.net/files?retryWrites=true&w=majority', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.error('Failed to connect to MongoDB:', error));
 
@@ -22,20 +25,30 @@ const fileSchema = new mongoose.Schema({
 });
 const File = mongoose.model('File', fileSchema);
 
-// Configure multer storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads');
-  },
-  filename: (req, file, cb) => {
-    const fileId = req.fileId; // Assuming you pass the document _id as "fileId" in the request
-    const originalFileName = file.originalname;
-    const fileExtension = path.extname(originalFileName);
-    const fileName = fileId + fileExtension;
-    cb(null, fileName);
-  },
+// Initialize Firebase Admin SDK
+const serviceAccount = require('e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: 'https://console.firebase.google.com/project/e-class-file-upload/storage/e-class-file-upload.appspot.com/files',
 });
-const upload = multer({ storage });
+
+const bucket = admin.storage().bucket();
+
+// Configure multer storage
+const upload = multer({
+  storage: multerGoogleStorage.storageEngine({
+    bucket: 'https://console.firebase.google.com/project/e-class-file-upload/storage/e-class-file-upload.appspot.com/files',
+    keyFilename: 'e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json',
+    filename: (req, file, cb) => {
+      const fileId = req.fileId; // Assuming you pass the document _id as "fileId" in the request
+      const originalFileName = file.originalname;
+      const fileExtension = path.extname(originalFileName);
+      const fileName = fileId + fileExtension;
+      cb(null, fileName);
+    },
+  }),
+});
 
 // Upload route
 app.post('/upload', upload.single('file'), async (req, res) => {
@@ -47,11 +60,28 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     });
 
     const savedFile = await newFile.save();
-    res.json(savedFile._id); // Send back the _id of the stored document as the response
+
+    const fileUpload = bucket.file(req.file.filename);
+    const stream = fileUpload.createWriteStream({
+      metadata: {
+        contentType: req.file.mimetype,
+      },
+    });
+
+    stream.on('error', (error) => {
+      res.status(500).send(error.message);
+    });
+
+    stream.on('finish', async () => {
+      res.json(savedFile._id);
+    });
+
+    stream.end(req.file.buffer);
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
+
 // Get file route
 app.get('/files/:id', async (req, res) => {
   try {
@@ -68,13 +98,11 @@ app.get('/files/:id', async (req, res) => {
   }
 });
 
-app.get('/',(req,res)=>{
-  res.status(200).send("Home");
-})
-
+app.get('/', (req, res) => {
+  res.status(200).send('Home');
+});
 
 // Start the server
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
-
