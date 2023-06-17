@@ -58,8 +58,11 @@ const upload = multer({ storage: multerStorage });
 app.post('/upload', upload.single('file'), async (req, res) => {
   try {
     console.log("req for upload received");
+    
+    const uniqueFilename = `${timestamp}-${req.file.originalname}`;
     const newFile = new File({
-      filename: req.file.originalname,
+      fileorgname: req.file.originalname,
+      filename:uniqueFilename,
       mimetype: req.file.mimetype,
       size: req.file.size,
     });
@@ -67,7 +70,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const savedFile = await newFile.save();
 
     const timestamp = Date.now(); // Get current timestamp
-    const uniqueFilename = `${timestamp}-${req.file.originalname}`;
 
     const fileUpload = storage.bucket('e-class-file-upload.appspot.com').file(uniqueFilename);
     const stream = fileUpload.createWriteStream({
