@@ -25,6 +25,24 @@ const fileSchema = new mongoose.Schema({
 });
 const File = mongoose.model('File', fileSchema);
 
+// Authenticate with ADC
+const storage = new Storage({
+  projectId: 'e-class-file-upload', // Replace with your actual Google Cloud project ID
+  keyFilename: path.join(__dirname, 'e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json'), // Provide the relative path to the JSON key file
+});
+
+async function listStorageBuckets() {
+  try {
+    const [buckets] = await storage.getBuckets();
+    console.log('Buckets:');
+    buckets.forEach((bucket) => {
+      console.log(`- ${bucket.name}`);
+    });
+  } catch (error) {
+    console.error('Error listing storage buckets:', error);
+  }
+}
+
 // Initialize Firebase Admin SDK
 const serviceAccount = require('./e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json');
 
@@ -32,18 +50,14 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-const bucketName = 'gs://e-class-file-upload.appspot.com'; // Replace 'your-bucket-name' with your actual bucket name
-const storage = new Storage({ projectId: 'e-class-file-upload' }); // Replace 'your-project-id' with your Firebase project ID
-const bucket = storage.bucket(bucketName);
-
 // Configure multer storage
-const upload = multer({
-  storage: multer.memoryStorage(),
-});
+const multerStorage = multer.memoryStorage();
+const upload = multer({ storage: multerStorage });
 
 // Upload route
 app.post('/upload', upload.single('file'), async (req, res) => {
   try {
+    console.log("req for upload received");
     const newFile = new File({
       filename: req.file.originalname,
       mimetype: req.file.mimetype,
@@ -52,7 +66,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     const savedFile = await newFile.save();
 
-    const fileUpload = bucket.file(req.file.originalname);
+    const timestamp = Date.now(); // Get current timestamp
+    const uniqueFilename = `${timestamp}-${req.file.originalname}`;
+
+    const fileUpload = storage.bucket('e-class-file-upload.appspot.com').file(uniqueFilename);
     const stream = fileUpload.createWriteStream({
       metadata: {
         contentType: req.file.mimetype,
@@ -82,7 +99,7 @@ app.get('/files/:id', async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    const fileDownload = bucket.file(file.filename);
+    const fileDownload = storage.bucket('e-class-file-upload.appspot.com').file(file.filename);
     const stream = fileDownload.createReadStream();
 
     stream.on('error', (error) => {
@@ -103,3 +120,6 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+
+// List storage buckets
+listStorageBuckets();
