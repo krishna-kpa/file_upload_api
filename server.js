@@ -26,7 +26,7 @@ const fileSchema = new mongoose.Schema({
 const File = mongoose.model('File', fileSchema);
 
 // Initialize Firebase Admin SDK
-const serviceAccount = require('e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json');
+const serviceAccount = require('./e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -39,7 +39,7 @@ const bucket = admin.storage().bucket();
 const upload = multer({
   storage: multerGoogleStorage.storageEngine({
     bucket: 'https://console.firebase.google.com/project/e-class-file-upload/storage/e-class-file-upload.appspot.com/files',
-    keyFilename: 'e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json',
+    keyFilename: './e-class-file-upload-firebase-adminsdk-5yx1f-ee3142614f.json',
     filename: (req, file, cb) => {
       const fileId = req.fileId; // Assuming you pass the document _id as "fileId" in the request
       const originalFileName = file.originalname;
