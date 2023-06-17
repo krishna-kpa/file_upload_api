@@ -69,6 +69,11 @@ app.get('/files/:id', async (req, res) => {
   }
 });
 
+app.get('/',(req,res)=>{
+  res.status(200).send("Home");
+})
+
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
