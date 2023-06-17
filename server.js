@@ -52,7 +52,6 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     res.status(500).send(error.message);
   }
 });
-
 // Get file route
 app.get('/files/:id', async (req, res) => {
   try {
